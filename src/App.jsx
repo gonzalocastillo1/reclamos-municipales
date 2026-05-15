@@ -33,28 +33,44 @@ function App() {
     return unsub;
   }, []);
 
-  if (cargando) return <p style={{ textAlign: "center", marginTop: "100px" }}>Cargando...</p>;
+  if (cargando) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <img src="/logo.png" alt="Logo Soriano" className="h-20 w-auto mx-auto mb-4 opacity-50" />
+        <p className="text-gray-400 text-sm">Cargando...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div>
-      <nav style={{ backgroundColor: "#1e40af", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ color: "white", fontWeight: "bold", fontSize: "18px" }}>🏛️ Municipio de Soriano</span>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button onClick={() => setVista("formulario")}
-            style={{ padding: "6px 14px", backgroundColor: vista === "formulario" ? "white" : "transparent", color: vista === "formulario" ? "#1e40af" : "white", border: "1px solid white", borderRadius: "6px", cursor: "pointer" }}>
-            Reportar problema
-          </button>
-          <button onClick={() => setVista(usuario ? (datosUsuario?.rol === "admin" ? "admin" : "panel") : "login")}
-            style={{ padding: "6px 14px", backgroundColor: vista === "panel" || vista === "login" || vista === "admin" ? "white" : "transparent", color: vista === "panel" || vista === "login" || vista === "admin" ? "#1e40af" : "white", border: "1px solid white", borderRadius: "6px", cursor: "pointer" }}>
-            {usuario ? (datosUsuario?.rol === "admin" ? "Administrador" : "Mi panel") : "Encargados"}
-          </button>
-        </div>
-      </nav>
+    <div className="min-h-screen flex flex-col bg-gray-50">
 
-      {vista === "formulario" && <FormularioReclamo />}
-      {vista === "login" && <Login onLogin={(user) => setUsuario(user)} />}
-      {vista === "panel" && datosUsuario && <PanelEncargado usuario={datosUsuario} />}
-      {vista === "admin" && <PanelAdmin />}
+      {/* HEADER solo visible en formulario */}
+      {vista === "formulario" && (
+        <header className="bg-white shadow-sm py-4 px-6">
+          <div className="max-w-lg mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Logo Soriano" className="h-14 w-auto" />
+              <div>
+                <p className="font-black text-xl leading-none" style={{color: "#3dbfbf"}}>SORIANO</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest leading-none mt-0.5">Tu App</p>
+              </div>
+            </div>
+          </div>
+        </header>
+      )}
+
+      <div className="flex-1">
+        {vista === "formulario" && (
+          <FormularioReclamo
+            onEncargados={() => setVista(usuario ? (datosUsuario?.rol === "admin" ? "admin" : "panel") : "login")}
+          />
+        )}
+        {vista === "login" && <Login onLogin={(user) => setUsuario(user)} />}
+        {vista === "panel" && datosUsuario && <PanelEncargado usuario={datosUsuario} />}
+        {vista === "admin" && <PanelAdmin />}
+      </div>
+
     </div>
   );
 }
