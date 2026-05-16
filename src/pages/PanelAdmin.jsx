@@ -4,6 +4,7 @@ import { db, auth } from "../firebase";
 import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import Notificaciones from "../Notificaciones.jsx";
 import { crearNotificacion } from "../notificaciones";
+import PanelReportes from "./PanelReportes";
 
 function PanelAdmin() {
   const [seccion, setSeccion] = useState("reclamos");
@@ -16,6 +17,7 @@ function PanelAdmin() {
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [asignando, setAsignando] = useState(null);
   const [areaSeleccionada, setAreaSeleccionada] = useState("");
+  const [categoriaAsignacion, setCategoriaAsignacion] = useState("");
 
   // Modales
   const [modalCategoria, setModalCategoria] = useState(null);
@@ -51,9 +53,14 @@ function PanelAdmin() {
 
   const asignarArea = async (reclamo) => {
     if (!areaSeleccionada) return alert("Seleccioná un área");
+    const catId = categoriaAsignacion || reclamo.categoriaId;
+    const cat = categorias.find(c => c.id === catId);
     await updateDoc(doc(db, "reclamos", reclamo.id), {
       areaId: areaSeleccionada,
       estado: "asignado",
+      categoriaId: catId,
+      categoria: cat?.nombre || reclamo.categoria,
+      fechaAsignado: new Date(),
     });
 
     // Notificar al ejecutor
@@ -62,28 +69,29 @@ function PanelAdmin() {
       await crearNotificacion({
         para: ejecutor.email,
         tipo: "nueva_tarea",
-        mensaje: `Nueva tarea asignada: ${reclamo.categoria} - ${reclamo.descripcion.substring(0, 50)}...`,
+        mensaje: `Nueva tarea asignada: ${cat?.nombre || reclamo.categoria} - ${reclamo.descripcion.substring(0, 50)}...`,
         reclamoId: reclamo.id,
       });
     }
 
     // Notificar al encargado
-    const encargados = usuarios.filter(u => u.rol === "encargado" && u.categoriaId === reclamo.categoriaId);
+    const encargados = usuarios.filter(u => u.rol === "encargado" && u.categoriaId === catId);
     for (const encargado of encargados) {
       await crearNotificacion({
         para: encargado.email,
         tipo: "tarea_asignada",
-        mensaje: `Tarea asignada en ${reclamo.categoria}: ${reclamo.descripcion.substring(0, 50)}...`,
+        mensaje: `Tarea asignada en ${cat?.nombre || reclamo.categoria}: ${reclamo.descripcion.substring(0, 50)}...`,
         reclamoId: reclamo.id,
       });
     }
 
     setAsignando(null);
     setAreaSeleccionada("");
+    setCategoriaAsignacion("");
   };
 
   const aprobarYEnviar = async (reclamo) => {
-    await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto" });
+    await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto", fechaResuelto: new Date() });
 
     const telefono = reclamo.telefono.replace(/\D/g, "");
     const telefonoUY = telefono.startsWith("598") ? telefono : `598${telefono}`;
@@ -185,23 +193,27 @@ function PanelAdmin() {
   }[pestanaReclamos];
 
   const secciones = [
-    { id: "reclamos", label: "Reclamos", icono: "📋" },
-    { id: "categorias", label: "Categorías", icono: "🏷️" },
-    { id: "areas", label: "Áreas", icono: "📍" },
-    { id: "usuarios", label: "Usuarios", icono: "👥" },
+    { id: "reclamos",  label: "Reclamos",   icono: "📋" },
+    { id: "categorias",label: "Categorías", icono: "🏷️" },
+    { id: "areas",     label: "Áreas",      icono: "📍" },
+    { id: "usuarios",  label: "Usuarios",   icono: "👥" },
+    { id: "reportes",  label: "Reportes",   icono: "📊" },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{background: "linear-gradient(160deg, #e8f8f8 0%, #f0fafa 40%, #eaf4f4 100%)"}}>
       {/* Header */}
-      <div className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-widest">Panel</p>
-          <h1 className="text-xl font-bold text-gray-800">Administrador</h1>
+      <div className="shadow-sm px-6 py-3 flex items-center justify-between" style={{background: "linear-gradient(135deg, #3dbfbf 0%, #2a9d9d 60%, #1a7a7a 100%)"}}>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Logo Soriano" className="h-10 w-auto drop-shadow" />
+          <div>
+            <p className="text-xs text-white opacity-70 uppercase tracking-widest">Panel</p>
+            <h1 className="text-lg font-bold text-white">Administrador</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Notificaciones email={auth.currentUser?.email} />
-          <button onClick={() => signOut(auth)} className="text-sm text-gray-400 hover:text-red-500 transition font-medium">
+          <button onClick={() => signOut(auth)} className="text-sm text-white opacity-70 hover:opacity-100 transition font-medium">
             Cerrar sesión
           </button>
         </div>
@@ -319,22 +331,36 @@ function PanelAdmin() {
 
                   {asignando === r.id && (
                     <div className="mt-3 p-4 bg-gray-50 rounded-xl space-y-3">
-                      <p className="text-sm font-semibold text-gray-700">Seleccioná el área:</p>
-                      <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
-                        className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none"
-                        style={{borderColor: "#3dbfbf"}}>
-                        <option value="">Seleccioná un área</option>
-                        {areas.filter(a => a.categoriaId === r.categoriaId).map(area => (
-                          <option key={area.id} value={area.id}>{area.nombre}</option>
-                        ))}
-                      </select>
+                      <p className="text-sm font-semibold text-gray-700">Asignar tarea:</p>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Categoría</label>
+                        <select value={categoriaAsignacion || r.categoriaId}
+                          onChange={e => { setCategoriaAsignacion(e.target.value); setAreaSeleccionada(""); }}
+                          className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                          style={{borderColor: "#3dbfbf"}}>
+                          {categorias.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.icono} {cat.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Área</label>
+                        <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
+                          className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                          style={{borderColor: "#3dbfbf"}}>
+                          <option value="">Seleccioná un área</option>
+                          {areas.filter(a => a.categoriaId === (categoriaAsignacion || r.categoriaId)).map(area => (
+                            <option key={area.id} value={area.id}>{area.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
                       <div className="flex gap-2">
                         <button onClick={() => asignarArea(r)}
                           className="flex-1 py-2 rounded-xl text-white font-semibold"
                           style={{backgroundColor: "#3dbfbf"}}>
                           Confirmar asignación
                         </button>
-                        <button onClick={() => { setAsignando(null); setAreaSeleccionada(""); }}
+                        <button onClick={() => { setAsignando(null); setAreaSeleccionada(""); setCategoriaAsignacion(""); }}
                           className="px-4 py-2 rounded-xl bg-gray-200 text-gray-600 font-semibold">
                           Cancelar
                         </button>
@@ -428,10 +454,10 @@ function PanelAdmin() {
                 + Nuevo usuario
               </button>
             </div>
-            {["encargado", "ejecutor"].map((rol) => (
+            {["encargado", "ejecutor", "supervisor", "admin"].map((rol) => (
               <div key={rol} className="mb-6">
                 <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">
-                  {rol === "encargado" ? "👔 Encargados" : "🔧 Ejecutores"}
+                  {rol === "encargado" ? "👔 Encargados" : rol === "ejecutor" ? "🔧 Ejecutores" : rol === "supervisor" ? "🔍 Supervisores" : "⚙️ Administradores"}
                 </p>
                 <div className="space-y-2">
                   {usuarios.filter(u => u.rol === rol).map((u) => {
@@ -458,6 +484,12 @@ function PanelAdmin() {
             ))}
           </div>
         )}
+
+        {/* REPORTES */}
+        {seccion === "reportes" && (
+          <PanelReportes reclamos={reclamos} categorias={categorias} areas={areas} />
+        )}
+
       </div>
 
       {/* MODAL CATEGORIA */}
@@ -548,17 +580,20 @@ function PanelAdmin() {
                   className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none" style={{borderColor: "#3dbfbf"}}>
                   <option value="encargado">Encargado</option>
                   <option value="ejecutor">Ejecutor de tareas</option>
+                  <option value="supervisor">Supervisor</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Categoría</label>
-                <select value={formUsuario.categoriaId} onChange={e => setFormUsuario({...formUsuario, categoriaId: e.target.value, areaId: ""})}
-                  className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none" style={{borderColor: "#3dbfbf"}}>
-                  <option value="">Seleccioná una categoría</option>
-                  {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
-                </select>
-              </div>
+              {!["supervisor", "admin"].includes(formUsuario.rol) && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Categoría</label>
+                  <select value={formUsuario.categoriaId} onChange={e => setFormUsuario({...formUsuario, categoriaId: e.target.value, areaId: ""})}
+                    className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none" style={{borderColor: "#3dbfbf"}}>
+                    <option value="">Seleccioná una categoría</option>
+                    {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
+                  </select>
+                </div>
+              )}
               {formUsuario.rol === "ejecutor" && formUsuario.categoriaId && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Área específica</label>

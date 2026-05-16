@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import PanelEncargado from "./pages/PanelEncargado";
 import PanelAdmin from "./pages/PanelAdmin";
 import PanelEjecutor from "./pages/PanelEjecutor";
+import PanelSupervisor from "./pages/PanelSupervisor";
 
 function Bienvenida({ onComenzar, onEncargados }) {
   const pasos = [
@@ -26,13 +27,23 @@ function Bienvenida({ onComenzar, onEncargados }) {
         <div className="absolute top-1/2 right-8 w-32 h-32 rounded-full opacity-5" style={{backgroundColor: "white"}}></div>
 
         <div className="relative max-w-lg mx-auto px-6 py-10 text-center">
-          <div className="flex flex-col items-center mb-6">
-            <img src="/public/logo.png" alt="Logo Soriano" className="h-32 w-auto mb-4 drop-shadow-lg" style={{filter: "brightness(1) invert(0)"}} />
-            <h1 className="text-4xl font-black text-white tracking-wide drop-shadow">SORIANO</h1>
-            <p className="text-lg font-semibold text-white opacity-90 tracking-widest uppercase mt-1">Tu App</p>
+          <div className="flex flex-col items-center mb-2">
+            {/* Barra con olas detrás del logo - de lado a lado */}
+            <div className="relative w-full flex justify-center mb-2">
+              <svg viewBox="0 0 360 140" xmlns="http://www.w3.org/2000/svg"
+                className="absolute top-1/2 w-screen"
+                style={{transform: "translateY(-50%)", zIndex: 0, left: "50%", marginLeft: "-50vw"}}>
+                <path d="M0,15 C40,0 80,35 120,15 C160,0 200,35 240,15 C280,0 320,35 360,15 L360,125 C320,140 280,105 240,125 C200,140 160,105 120,125 C80,140 40,105 0,125 Z"
+                  fill="white" fillOpacity="0.55"/>
+                <path d="M0,25 C50,2 100,50 150,25 C200,2 250,50 300,25 C325,12 345,35 360,25 L360,115 C340,128 320,105 300,115 C250,132 200,88 150,115 C100,132 50,95 0,115 Z"
+                  fill="white" fillOpacity="0.85"/>
+              </svg>
+              <img src="/logo.png" alt="Logo Soriano" className="h-42 w-auto drop-shadow-lg relative" style={{zIndex: 0, marginBottom: "3px", marginTop: "-4px"}} />
+            </div>
+            <h1 className="text-4xl font-black text-gray-500 tracking-wide drop-shadow mt-0">TU APP</h1>
           </div>
 
-          <p className="text-white opacity-90 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+          <p className="text-4xl font-black text-gray-600 opacity-90 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
             Reportá problemas en tu barrio y la Intendencia los resolverá. Rápido, simple y sin complicaciones.
           </p>
 
@@ -101,9 +112,9 @@ function Bienvenida({ onComenzar, onEncargados }) {
           <p className="text-sm font-semibold text-gray-700">Intendencia Departamental de Soriano</p>
           <p className="text-sm text-gray-500">📞 4532 2201 &nbsp;|&nbsp; ✉️ contacto@soriano.gub.uy</p>
           <div className="flex justify-center gap-4 text-sm">
-            <a href="https://facebook.com" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-blue-600 transition">Facebook</a>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-pink-500 transition">Instagram</a>
-            <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-sky-500 transition">Twitter</a>
+            <a href="https://facebook.com/intendenciasoriano" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-blue-600 transition">Facebook</a>
+            <a href="https://instagram.com/sorianofertil" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-pink-500 transition">Instagram</a>
+            <a href="https://youtube.com/@sorianotv3939" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-sky-500 transition">Youtube</a>
           </div>
           <p className="text-xs text-gray-400">© 2026 Intendencia de Soriano. Todos los derechos reservados.</p>
           <button onClick={onEncargados} className="text-xs text-gray-300 hover:text-gray-400 transition mt-1">
@@ -139,6 +150,7 @@ function App() {
           if (datos.rol === "admin") setVista("admin");
           else if (datos.rol === "encargado") setVista("panel");
           else if (datos.rol === "ejecutor") setVista("ejecutor");
+          else if (datos.rol === "supervisor") setVista("supervisor");
         }
         setUsuario(user);
       } else {
@@ -179,6 +191,7 @@ function App() {
         {vista === "panel" && datosUsuario && <PanelEncargado usuario={datosUsuario} />}
         {vista === "ejecutor" && datosUsuario && <PanelEjecutor usuario={datosUsuario} />}
         {vista === "admin" && <PanelAdmin />}
+        {vista === "supervisor" && datosUsuario && <PanelSupervisor usuario={datosUsuario} />}
       </div>
     </div>
   );

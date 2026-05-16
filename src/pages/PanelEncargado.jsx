@@ -8,11 +8,14 @@ import { crearNotificacion } from "../notificaciones";
 function PanelEncargado({ usuario }) {
   const [reclamos, setReclamos] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
   const [asignando, setAsignando] = useState(null);
   const [areaSeleccionada, setAreaSeleccionada] = useState("");
+  const [derivando, setDerivando] = useState(null);
+  const [categoriaDerivacion, setCategoriaDerivacion] = useState("");
   const [pestana, setPestana] = useState("pendientes");
 
   useEffect(() => {
@@ -38,14 +41,44 @@ function PanelEncargado({ usuario }) {
       setUsuarios(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsub(); unsubAreas(); unsubUsuarios(); };
+    const unsubCategorias = onSnapshot(collection(db, "categorias"), (snap) => {
+      setCategorias(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsub(); unsubAreas(); unsubUsuarios(); unsubCategorias(); };
   }, [usuario]);
+
+  const derivarCategoria = async (reclamo) => {
+    if (!categoriaDerivacion) return alert("Seleccioná una categoría");
+    const cat = categorias.find(c => c.id === categoriaDerivacion);
+    await updateDoc(doc(db, "reclamos", reclamo.id), {
+      categoriaId: categoriaDerivacion,
+      categoria: cat?.nombre || "",
+      estado: "pendiente",
+      areaId: "",
+    });
+
+    // Notificar al encargado de la nueva categoría
+    const encargados = usuarios.filter(u => u.rol === "encargado" && u.categoriaId === categoriaDerivacion);
+    for (const encargado of encargados) {
+      await crearNotificacion({
+        para: encargado.email,
+        tipo: "nueva_tarea",
+        mensaje: `Reclamo derivado a tu categoría: ${cat?.nombre} - ${reclamo.descripcion.substring(0, 50)}...`,
+        reclamoId: reclamo.id,
+      });
+    }
+
+    setDerivando(null);
+    setCategoriaDerivacion("");
+  };
 
   const asignarArea = async (reclamo) => {
     if (!areaSeleccionada) return alert("Seleccioná un área");
     await updateDoc(doc(db, "reclamos", reclamo.id), {
       areaId: areaSeleccionada,
       estado: "asignado",
+      fechaAsignado: new Date(),
     });
 
     // Notificar al ejecutor del área
@@ -75,7 +108,7 @@ function PanelEncargado({ usuario }) {
   };
 
   const aprobarYEnviar = async (reclamo) => {
-    await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto" });
+    await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto", fechaResuelto: new Date() });
 
     // Notificar al admin
     const admins = usuarios.filter(u => u.rol === "admin");
@@ -130,16 +163,19 @@ function PanelEncargado({ usuario }) {
   }[pestana];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-widest">Panel encargado</p>
-          <h1 className="text-xl font-bold text-gray-800">{usuario.categoria}</h1>
+    <div className="min-h-screen" style={{background: "linear-gradient(160deg, #e8f8f8 0%, #f0fafa 40%, #eaf4f4 100%)"}}>
+      <div className="shadow-sm px-6 py-3 flex items-center justify-between" style={{background: "linear-gradient(135deg, #3dbfbf 0%, #2a9d9d 60%, #1a7a7a 100%)"}}>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Logo Soriano" className="h-10 w-auto drop-shadow" />
+          <div>
+            <p className="text-xs text-white opacity-70 uppercase tracking-widest">Panel encargado</p>
+            <h1 className="text-lg font-bold text-white">{usuario.categoria}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Notificaciones email={usuario.email} />
           <button onClick={() => signOut(auth)}
-            className="text-sm text-gray-400 hover:text-red-500 transition font-medium">
+            className="text-sm text-white opacity-70 hover:opacity-100 transition font-medium">
             Cerrar sesión
           </button>
         </div>
@@ -213,11 +249,42 @@ function PanelEncargado({ usuario }) {
               <p className="text-xs text-gray-300 mb-3">{r.fecha?.toDate().toLocaleString("es-UY")}</p>
 
               {r.estado === "pendiente" && asignando !== r.id && (
-                <button onClick={() => setAsignando(r.id)}
-                  className="text-sm px-4 py-2 rounded-xl text-white font-semibold transition"
-                  style={{backgroundColor: "#3dbfbf"}}>
-                  Asignar a área →
-                </button>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => { setAsignando(r.id); setDerivando(null); }}
+                    className="text-sm px-4 py-2 rounded-xl text-white font-semibold transition"
+                    style={{backgroundColor: "#3dbfbf"}}>
+                    Asignar a área →
+                  </button>
+                  <button onClick={() => { setDerivando(r.id); setAsignando(null); setCategoriaDerivacion(""); }}
+                    className="text-sm px-4 py-2 rounded-xl bg-orange-100 text-orange-700 font-semibold hover:bg-orange-200 transition">
+                    Derivar a otra categoría ↗
+                  </button>
+                </div>
+              )}
+
+              {derivando === r.id && (
+                <div className="mt-3 p-4 bg-orange-50 rounded-xl space-y-3">
+                  <p className="text-sm font-semibold text-gray-700">Derivar a otra categoría:</p>
+                  <select value={categoriaDerivacion}
+                    onChange={e => setCategoriaDerivacion(e.target.value)}
+                    className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                    style={{borderColor: "#f97316"}}>
+                    <option value="">Seleccioná una categoría</option>
+                    {categorias.filter(c => c.id !== usuario.categoriaId).map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.icono} {cat.nombre}</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button onClick={() => derivarCategoria(r)}
+                      className="flex-1 py-2 rounded-xl bg-orange-500 text-white font-semibold hover:bg-orange-600 transition">
+                      Confirmar derivación
+                    </button>
+                    <button onClick={() => { setDerivando(null); setCategoriaDerivacion(""); }}
+                      className="px-4 py-2 rounded-xl bg-gray-200 text-gray-600 font-semibold">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               )}
 
               {asignando === r.id && (

@@ -56,7 +56,7 @@ function PanelEjecutor({ usuario }) {
   };
 
   const marcarEnProceso = async (id) => {
-    await updateDoc(doc(db, "reclamos", id), { estado: "en proceso" });
+    await updateDoc(doc(db, "reclamos", id), { estado: "en proceso", fechaEnProceso: new Date() });
   };
 
   const marcarParaVerificar = async (reclamo) => {
@@ -68,6 +68,7 @@ function PanelEjecutor({ usuario }) {
         fotosResolucion: urlsFotos,
         descripcionResolucion,
         fechaResolucion: new Date(),
+        fechaVerificar: new Date(),
       });
 
       // Notificar al encargado de la categoría
@@ -108,16 +109,19 @@ function PanelEjecutor({ usuario }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-widest">Panel ejecutor</p>
-          <h1 className="text-xl font-bold text-gray-800">{usuario.areaNombre || "Mi área"}</h1>
+    <div className="min-h-screen" style={{background: "linear-gradient(160deg, #e8f8f8 0%, #f0fafa 40%, #eaf4f4 100%)"}}>
+      <div className="shadow-sm px-6 py-3 flex items-center justify-between" style={{background: "linear-gradient(135deg, #3dbfbf 0%, #2a9d9d 60%, #1a7a7a 100%)"}}>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Logo Soriano" className="h-10 w-auto drop-shadow" />
+          <div>
+            <p className="text-xs text-white opacity-70 uppercase tracking-widest">Panel ejecutor</p>
+            <h1 className="text-lg font-bold text-white">{usuario.areaNombre || "Mi área"}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Notificaciones email={usuario.email} />
           <button onClick={() => signOut(auth)}
-            className="text-sm text-gray-400 hover:text-red-500 transition font-medium">
+            className="text-sm text-white opacity-70 hover:opacity-100 transition font-medium">
             Cerrar sesión
           </button>
         </div>
