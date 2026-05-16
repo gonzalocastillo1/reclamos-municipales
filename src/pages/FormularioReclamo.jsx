@@ -1,26 +1,28 @@
-import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, addDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 function FormularioReclamo({ onEncargados }) {
   const [formulario, setFormulario] = useState({
     nombre: "",
     telefono: "",
+    categoriaId: "",
     categoria: "",
     descripcion: "",
   });
+  const [categorias, setCategorias] = useState([]);
   const [fotos, setFotos] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
-  const categorias = [
-    { valor: "Alumbrado público", icono: "💡" },
-    { valor: "Reparación de calles", icono: "🚧" },
-    { valor: "Recolección de basura", icono: "🗑️" },
-    { valor: "Otro", icono: "📋" },
-  ];
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "categorias"), (snap) => {
+      setCategorias(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, []);
 
   const handleChange = (e) => {
     setFormulario({ ...formulario, [e.target.name]: e.target.value });
@@ -45,7 +47,7 @@ function FormularioReclamo({ onEncargados }) {
   };
 
   const handleEnviar = async () => {
-    if (!formulario.nombre || !formulario.telefono || !formulario.categoria || !formulario.descripcion) {
+    if (!formulario.nombre || !formulario.telefono || !formulario.categoriaId || !formulario.descripcion) {
       alert("Por favor completá todos los campos");
       return;
     }
@@ -72,7 +74,7 @@ function FormularioReclamo({ onEncargados }) {
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Reclamo enviado</h2>
           <p className="text-gray-500 mb-6">Tu reclamo fue registrado. Te notificaremos cuando esté resuelto.</p>
-          <button onClick={() => { setEnviado(false); setFormulario({ nombre: "", telefono: "", categoria: "", descripcion: "" }); setFotos([]); setPreviews([]); }}
+          <button onClick={() => { setEnviado(false); setFormulario({ nombre: "", telefono: "", categoriaId: "", categoria: "", descripcion: "" }); setFotos([]); setPreviews([]); }}
             className="text-white px-6 py-3 rounded-xl font-semibold transition" style={{backgroundColor: "#3dbfbf"}}>
             Cargar otro reclamo
           </button>
@@ -114,15 +116,15 @@ function FormularioReclamo({ onEncargados }) {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Categoría del problema</label>
                 <div className="grid grid-cols-2 gap-2">
                   {categorias.map((cat) => (
-                    <button key={cat.valor} type="button"
-                      onClick={() => setFormulario({ ...formulario, categoria: cat.valor })}
+                    <button key={cat.id} type="button"
+                      onClick={() => setFormulario({ ...formulario, categoriaId: cat.id, categoria: cat.nombre })}
                       className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition"
                       style={{
-                        borderColor: formulario.categoria === cat.valor ? "#3dbfbf" : "#e5e7eb",
-                        backgroundColor: formulario.categoria === cat.valor ? "#e6f9f9" : "white",
-                        color: formulario.categoria === cat.valor ? "#3dbfbf" : "#6b7280"
+                        borderColor: formulario.categoriaId === cat.id ? "#3dbfbf" : "#e5e7eb",
+                        backgroundColor: formulario.categoriaId === cat.id ? "#e6f9f9" : "white",
+                        color: formulario.categoriaId === cat.id ? "#3dbfbf" : "#6b7280"
                       }}>
-                      <span>{cat.icono}</span> {cat.valor}
+                      <span>{cat.icono}</span> {cat.nombre}
                     </button>
                   ))}
                 </div>
