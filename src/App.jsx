@@ -10,6 +10,26 @@ import PanelEjecutor from "./pages/PanelEjecutor";
 import PanelSupervisor from "./pages/PanelSupervisor";
 
 function Bienvenida({ onComenzar, onEncargados }) {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [mostrarInstalar, setMostrarInstalar] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setMostrarInstalar(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const instalarApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") setMostrarInstalar(false);
+    setDeferredPrompt(null);
+  };
   const pasos = [
     { icono: "💡", titulo: "Alumbrado público", desc: "Luminarias apagadas o dañadas" },
     { icono: "🚧", titulo: "Calles y veredas", desc: "Baches, roturas o hundimientos" },
@@ -40,11 +60,11 @@ function Bienvenida({ onComenzar, onEncargados }) {
               </svg>
               <img src="/logo.png" alt="Logo Soriano" className="h-42 w-auto drop-shadow-lg relative" style={{zIndex: 0, marginBottom: "3px", marginTop: "-4px"}} />
             </div>
-            <h1 className="text-4xl font-black text-gray-500 tracking-wide drop-shadow mt-0">TU APP</h1>
+            <h1 className="text-4xl font-black text-gray-500 tracking-wide drop-shadow mt-0">Soriano TU APP</h1>
           </div>
 
           <p className="text-4xl font-black text-gray-600 opacity-90 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
-            Reportá problemas en tu barrio y la Intendencia los resolverá. Rápido, simple y sin complicaciones.
+            Reportanos problemas en tu barrio e intentaremos resolverlo lo antes posible.
           </p>
 
           <button onClick={onComenzar}
@@ -104,6 +124,14 @@ function Bienvenida({ onComenzar, onEncargados }) {
           style={{backgroundColor: "#3dbfbf"}}>
           Comenzar ahora →
         </button>
+
+        {mostrarInstalar && (
+          <button onClick={instalarApp}
+            className="w-full py-4 rounded-2xl font-bold text-lg shadow-md transition hover:shadow-lg mb-4 flex items-center justify-center gap-2 border-2"
+            style={{borderColor: "#3dbfbf", color: "#3dbfbf", backgroundColor: "white"}}>
+            📲 Instalar app en tu celular
+          </button>
+        )}
       </div>
 
       {/* FOOTER */}
