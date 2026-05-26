@@ -31,7 +31,7 @@ function PanelSupervisor({ usuario }) {
       ? `\n\nDetalle del trabajo: ${reclamo.descripcionResolucion}`
       : "";
     const fotosTexto = reclamo.fotosResolucion?.length > 0
-      ? `\n\n📸 Se adjuntaron ${reclamo.fotosResolucion.length} foto(s) del trabajo realizado.`
+      ? `\n\n📸 Foto(s) del trabajo realizado:\n${reclamo.fotosResolucion.map((url, i) => `Foto ${i + 1}: ${url}`).join("\n")}`
       : "";
     const mensaje = encodeURIComponent(
       `Hola ${reclamo.nombre} 👋, tu reclamo sobre *"${reclamo.categoria}"* ha sido resuelto. ✅${descripcionTexto}${fotosTexto}\n\nGracias por contactarte con la Intendencia de Soriano. 🏛️`
