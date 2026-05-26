@@ -107,9 +107,9 @@ function PanelEncargado({ usuario }) {
     setAreaSeleccionada("");
   };
 
-  const aprobarYEnviar = async (reclamo) => {
+  const marcarResuelto = async (reclamo) => {
+    if (!window.confirm("¿Confirmás que el trabajo fue verificado y el reclamo está resuelto?")) return;
     await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto", fechaResuelto: new Date() });
-
     // Notificar al admin
     const admins = usuarios.filter(u => u.rol === "admin");
     for (const admin of admins) {
@@ -120,19 +120,6 @@ function PanelEncargado({ usuario }) {
         reclamoId: reclamo.id,
       });
     }
-
-    const telefono = reclamo.telefono.replace(/\D/g, "");
-    const telefonoUY = telefono.startsWith("598") ? telefono : `598${telefono}`;
-    const fotosTexto = reclamo.fotosResolucion?.length > 0
-      ? `\n\nFotos del trabajo realizado:\n${reclamo.fotosResolucion.join("\n")}`
-      : "";
-    const descripcionTexto = reclamo.descripcionResolucion
-      ? `\n\nDetalle: ${reclamo.descripcionResolucion}`
-      : "";
-    const mensaje = encodeURIComponent(
-      `Hola ${reclamo.nombre} 👋, tu reclamo sobre *"${reclamo.categoria}"* ha sido resuelto. ✅${descripcionTexto}${fotosTexto}\n\nGracias por contactarte con la Intendencia de Soriano. 🏛️`
-    );
-    window.open(`https://wa.me/${telefonoUY}?text=${mensaje}`, "_blank");
   };
 
   const estadoConfig = {
@@ -313,9 +300,9 @@ function PanelEncargado({ usuario }) {
               )}
 
               {r.estado === "verificar" && (
-                <button onClick={() => aprobarYEnviar(r)}
+                <button onClick={() => marcarResuelto(r)}
                   className="text-sm px-4 py-2 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition">
-                  Aprobar y enviar WhatsApp ✓
+                  ✅ Marcar como resuelto
                 </button>
               )}
             </div>

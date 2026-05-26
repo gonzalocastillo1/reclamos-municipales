@@ -20,16 +20,18 @@ function PanelSupervisor({ usuario }) {
     return unsub;
   }, []);
 
-  const aprobarYEnviar = async (reclamo) => {
-    await updateDoc(doc(db, "reclamos", reclamo.id), { estado: "resuelto", fechaResuelto: new Date() });
-
+  const enviarWhatsApp = (reclamo) => {
+    if (!reclamo.telefono) {
+      alert("Este reclamo no tiene teléfono registrado. No se puede enviar WhatsApp.");
+      return;
+    }
     const telefono = reclamo.telefono.replace(/\D/g, "");
     const telefonoUY = telefono.startsWith("598") ? telefono : `598${telefono}`;
-    const fotosTexto = reclamo.fotosResolucion?.length > 0
-      ? `\n\nFotos del trabajo realizado:\n${reclamo.fotosResolucion.join("\n")}`
-      : "";
     const descripcionTexto = reclamo.descripcionResolucion
-      ? `\n\nDetalle: ${reclamo.descripcionResolucion}`
+      ? `\n\nDetalle del trabajo: ${reclamo.descripcionResolucion}`
+      : "";
+    const fotosTexto = reclamo.fotosResolucion?.length > 0
+      ? `\n\n📸 Se adjuntaron ${reclamo.fotosResolucion.length} foto(s) del trabajo realizado.`
       : "";
     const mensaje = encodeURIComponent(
       `Hola ${reclamo.nombre} 👋, tu reclamo sobre *"${reclamo.categoria}"* ha sido resuelto. ✅${descripcionTexto}${fotosTexto}\n\nGracias por contactarte con la Intendencia de Soriano. 🏛️`
@@ -170,11 +172,17 @@ function PanelSupervisor({ usuario }) {
               <p className="text-xs text-gray-300 mb-3">{r.fecha?.toDate().toLocaleString("es-UY")}</p>
 
               {/* Acción verificar */}
-              {r.estado === "verificar" && (
-                <button onClick={() => aprobarYEnviar(r)}
-                  className="text-sm px-4 py-2 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition">
-                  Aprobar y enviar WhatsApp ✓
-                </button>
+              {r.estado === "resuelto" && (
+                <div className="mt-3 flex items-center gap-3">
+                  {r.telefono ? (
+                    <button onClick={() => enviarWhatsApp(r)}
+                      className="text-sm px-4 py-2 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 transition">
+                      📲 Enviar WhatsApp
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Sin teléfono registrado</span>
+                  )}
+                </div>
               )}
             </div>
           ))}
