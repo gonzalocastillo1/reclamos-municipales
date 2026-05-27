@@ -1,13 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { escucharNotificaciones, marcarTodasLeidas } from "./notificaciones";
+
+const reproducirSonido = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Primer tono
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(880, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.3);
+
+    // Segundo tono
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+    gain2.gain.setValueAtTime(0.4, ctx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc2.start(ctx.currentTime + 0.15);
+    osc2.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.log("No se pudo reproducir sonido:", e);
+  }
+};
 
 function Notificaciones({ email }) {
   const [notificaciones, setNotificaciones] = useState([]);
   const [abierto, setAbierto] = useState(false);
+  const prevCountRef = useRef(0);
 
   useEffect(() => {
     if (!email) return;
-    const unsub = escucharNotificaciones(email, setNotificaciones);
+    const unsub = escucharNotificaciones(email, (nuevas) => {
+      if (nuevas.length > prevCountRef.current) {
+        reproducirSonido();
+      }
+      prevCountRef.current = nuevas.length;
+      setNotificaciones(nuevas);
+    });
     return unsub;
   }, [email]);
 
