@@ -15,6 +15,9 @@ function PanelEjecutor({ usuario }) {
   const [previewsResolucion, setPreviewsResolucion] = useState([]);
   const [descripcionResolucion, setDescripcionResolucion] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 10;
 
   useEffect(() => {
     if (!usuario || !usuario.areaId) return;
@@ -140,16 +143,52 @@ function PanelEjecutor({ usuario }) {
         </div>
 
         {cargando && <p className="text-center text-gray-400 py-10">Cargando tareas...</p>}
-        {!cargando && reclamos.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-2">✅</p>
-            <p className="text-gray-400">No tenés tareas asignadas.</p>
+
+        {/* BUSCADOR */}
+        {!cargando && (
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="🔍 Buscar por nombre, teléfono o descripción..."
+              value={busqueda}
+              onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+              className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none transition"
+              style={{ borderColor: busqueda ? "#3dbfbf" : "#e5e7eb" }}
+            />
+            {busqueda && (() => {
+              const bl = busqueda.toLowerCase();
+              const cant = reclamos.filter(r =>
+                r.nombre?.toLowerCase().includes(bl) ||
+                r.telefono?.toLowerCase().includes(bl) ||
+                r.descripcion?.toLowerCase().includes(bl)
+              ).length;
+              return <p className="text-xs text-gray-400 mt-1">{cant} resultado(s)</p>;
+            })()}
           </div>
         )}
 
-        <div className="space-y-4">
-          {reclamos.map((r) => (
-            <div key={r.id} className="bg-white rounded-2xl shadow-sm p-5">
+        {!cargando && (() => {
+          const bl = busqueda.toLowerCase();
+          const filtrados = busqueda
+            ? reclamos.filter(r =>
+                r.nombre?.toLowerCase().includes(bl) ||
+                r.telefono?.toLowerCase().includes(bl) ||
+                r.descripcion?.toLowerCase().includes(bl)
+              )
+            : reclamos;
+          const totalPags = Math.ceil(filtrados.length / POR_PAGINA);
+          const paginados = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+          return (
+            <>
+              {filtrados.length === 0 && (
+                <div className="text-center py-16">
+                  <p className="text-4xl mb-2">✅</p>
+                  <p className="text-gray-400">No tenés tareas asignadas.</p>
+                </div>
+              )}
+              <div className="space-y-4">
+                {paginados.map((r) => (
+                  <div key={r.id} className="bg-white rounded-2xl shadow-sm p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="font-bold text-gray-800">{r.nombre}</p>
@@ -229,6 +268,20 @@ function PanelEjecutor({ usuario }) {
             </div>
           ))}
         </div>
+        {!busqueda && totalPags > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
+              className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+              style={{ color: "#3dbfbf" }}>← Anterior</button>
+            <span className="text-sm text-gray-500">Página {pagina} de {totalPags}</span>
+            <button onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}
+              className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+              style={{ color: "#3dbfbf" }}>Siguiente →</button>
+          </div>
+        )}
+            </>
+          );
+        })()}
       </div>
 
       {fotoAmpliada && (

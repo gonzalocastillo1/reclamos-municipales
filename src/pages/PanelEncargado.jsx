@@ -17,6 +17,9 @@ function PanelEncargado({ usuario }) {
   const [derivando, setDerivando] = useState(null);
   const [categoriaDerivacion, setCategoriaDerivacion] = useState("");
   const [pestana, setPestana] = useState("pendientes");
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 10;
 
   useEffect(() => {
     if (!usuario || !usuario.categoriaId) return;
@@ -149,6 +152,18 @@ function PanelEncargado({ usuario }) {
     resueltos,
   }[pestana];
 
+  const busquedaLower = busqueda.toLowerCase();
+  const reclamosFiltradosBusqueda = busqueda
+    ? reclamos.filter(r =>
+        r.nombre?.toLowerCase().includes(busquedaLower) ||
+        r.telefono?.toLowerCase().includes(busquedaLower) ||
+        r.descripcion?.toLowerCase().includes(busquedaLower)
+      )
+    : reclamosMostrados;
+
+  const totalPaginas = Math.ceil((reclamosFiltradosBusqueda?.length || 0) / POR_PAGINA);
+  const reclamosPagina = reclamosFiltradosBusqueda?.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
   return (
     <div className="min-h-screen" style={{background: "linear-gradient(160deg, #e8f8f8 0%, #f0fafa 40%, #eaf4f4 100%)"}}>
       <div className="shadow-sm px-6 py-3 flex items-center justify-between" style={{background: "linear-gradient(135deg, #3dbfbf 0%, #2a9d9d 60%, #1a7a7a 100%)"}}>
@@ -171,7 +186,7 @@ function PanelEncargado({ usuario }) {
       <div className="max-w-2xl mx-auto px-4 pt-6">
         <div className="grid grid-cols-4 gap-2 mb-4">
           {pestanas.map((p) => (
-            <div key={p.id} onClick={() => setPestana(p.id)}
+            <div key={p.id} onClick={() => { setPestana(p.id); setPagina(1); setBusqueda(""); }}
               className="rounded-xl p-3 text-center cursor-pointer transition shadow-sm"
               style={{backgroundColor: pestana === p.id ? "#3dbfbf" : "white"}}>
               <p className="text-xl font-black" style={{color: pestana === p.id ? "white" : "#3dbfbf"}}>{p.count}</p>
@@ -183,7 +198,25 @@ function PanelEncargado({ usuario }) {
 
       <div className="max-w-2xl mx-auto px-4 pb-6">
         {cargando && <p className="text-center text-gray-400 py-10">Cargando reclamos...</p>}
-        {!cargando && reclamosMostrados.length === 0 && (
+
+        {/* BUSCADOR */}
+        {!cargando && (
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="🔍 Buscar por nombre, teléfono o descripción..."
+              value={busqueda}
+              onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+              className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none transition"
+              style={{ borderColor: busqueda ? "#3dbfbf" : "#e5e7eb" }}
+            />
+            {busqueda && (
+              <p className="text-xs text-gray-400 mt-1">{reclamosFiltradosBusqueda?.length} resultado(s) en todos los estados</p>
+            )}
+          </div>
+        )}
+
+        {!cargando && reclamosFiltradosBusqueda?.length === 0 && (
           <div className="text-center py-16">
             <p className="text-4xl mb-2">✅</p>
             <p className="text-gray-400">No hay reclamos en esta sección.</p>
@@ -191,7 +224,7 @@ function PanelEncargado({ usuario }) {
         )}
 
         <div className="space-y-4">
-          {reclamosMostrados.map((r) => (
+          {reclamosPagina?.map((r) => (
             <div key={r.id} className="bg-white rounded-2xl shadow-sm p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -308,6 +341,19 @@ function PanelEncargado({ usuario }) {
             </div>
           ))}
         </div>
+
+        {/* PAGINACIÓN */}
+        {!busqueda && totalPaginas > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
+              className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+              style={{ color: "#3dbfbf" }}>← Anterior</button>
+            <span className="text-sm text-gray-500">Página {pagina} de {totalPaginas}</span>
+            <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}
+              className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+              style={{ color: "#3dbfbf" }}>Siguiente →</button>
+          </div>
+        )}
       </div>
 
       {fotoAmpliada && (

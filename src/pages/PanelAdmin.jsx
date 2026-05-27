@@ -18,6 +18,9 @@ function PanelAdmin() {
   const [asignando, setAsignando] = useState(null);
   const [areaSeleccionada, setAreaSeleccionada] = useState("");
   const [categoriaAsignacion, setCategoriaAsignacion] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 10;
 
   // Modales
   const [modalCategoria, setModalCategoria] = useState(null);
@@ -194,6 +197,18 @@ function PanelAdmin() {
     resueltos,
   }[pestanaReclamos];
 
+  const busquedaLower = busqueda.toLowerCase();
+  const reclamosFiltradosBusqueda = busqueda
+    ? reclamos.filter(r =>
+        r.nombre?.toLowerCase().includes(busquedaLower) ||
+        r.telefono?.toLowerCase().includes(busquedaLower) ||
+        r.descripcion?.toLowerCase().includes(busquedaLower)
+      )
+    : reclamosMostrados;
+
+  const totalPaginas = Math.ceil((reclamosFiltradosBusqueda?.length || 0) / POR_PAGINA);
+  const reclamosPagina = reclamosFiltradosBusqueda?.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
   const secciones = [
     { id: "reclamos",  label: "Reclamos",   icono: "📋" },
     { id: "categorias",label: "Categorías", icono: "🏷️" },
@@ -258,7 +273,7 @@ function PanelAdmin() {
             {/* Pestañas */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               {pestanas.map((p) => (
-                <div key={p.id} onClick={() => setPestanaReclamos(p.id)}
+                <div key={p.id} onClick={() => { setPestanaReclamos(p.id); setPagina(1); setBusqueda(""); }}
                   className="rounded-xl p-3 text-center cursor-pointer transition shadow-sm"
                   style={{backgroundColor: pestanaReclamos === p.id ? "#3dbfbf" : "white"}}>
                   <p className="text-xl font-black" style={{color: pestanaReclamos === p.id ? "white" : "#3dbfbf"}}>{p.count}</p>
@@ -267,7 +282,24 @@ function PanelAdmin() {
               ))}
             </div>
 
-            {reclamosMostrados?.length === 0 && (
+            {/* BUSCADOR */}
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="🔍 Buscar por nombre, teléfono o descripción..."
+                value={busqueda}
+                onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+                className="w-full border-2 rounded-xl px-4 py-3 text-sm focus:outline-none transition"
+                style={{ borderColor: busqueda ? "#3dbfbf" : "#e5e7eb" }}
+              />
+              {busqueda && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {reclamosFiltradosBusqueda?.length} resultado(s) en todos los estados
+                </p>
+              )}
+            </div>
+
+            {reclamosFiltradosBusqueda?.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-4xl mb-2">✅</p>
                 <p className="text-gray-400">No hay reclamos en esta sección.</p>
@@ -275,7 +307,7 @@ function PanelAdmin() {
             )}
 
             <div className="space-y-4">
-              {reclamosMostrados?.map((r) => (
+              {reclamosPagina?.map((r) => (
                 <div key={r.id} className="bg-white rounded-2xl shadow-sm p-5">
                   <div className="flex items-start justify-between mb-2">
                     <div>
@@ -385,6 +417,19 @@ function PanelAdmin() {
                 </div>
               ))}
             </div>
+
+            {/* PAGINACIÓN */}
+            {!busqueda && totalPaginas > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+                  style={{ color: "#3dbfbf" }}>← Anterior</button>
+                <span className="text-sm text-gray-500">Página {pagina} de {totalPaginas}</span>
+                <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold bg-white shadow-sm disabled:opacity-40 transition"
+                  style={{ color: "#3dbfbf" }}>Siguiente →</button>
+              </div>
+            )}
           </div>
         )}
 
