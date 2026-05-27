@@ -193,13 +193,15 @@ function FormularioReclamo({ onEncargados }) {
                   {categorias.map((cat) => (
                     <button key={cat.id} type="button"
                       onClick={() => setFormulario({ ...formulario, categoriaId: cat.id, categoria: cat.nombre })}
-                      className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition"
+                      className="flex items-center gap-2 px-3 py-3 rounded-xl border-2 font-medium transition w-full min-w-0"
                       style={{
                         borderColor: formulario.categoriaId === cat.id ? "#3dbfbf" : "#e5e7eb",
                         backgroundColor: formulario.categoriaId === cat.id ? "#e6f9f9" : "white",
-                        color: formulario.categoriaId === cat.id ? "#3dbfbf" : "#6b7280"
+                        color: formulario.categoriaId === cat.id ? "#3dbfbf" : "#6b7280",
+                        fontSize: cat.nombre.length > 15 ? "0.7rem" : "0.875rem",
                       }}>
-                      <span>{cat.icono}</span> {cat.nombre}
+                      <span className="flex-shrink-0">{cat.icono}</span>
+                      <span className="truncate">{cat.nombre}</span>
                     </button>
                   ))}
                 </div>

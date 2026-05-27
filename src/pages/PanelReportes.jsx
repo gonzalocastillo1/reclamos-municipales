@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ const REPORTES = [
   { id: "areas",      label: "Por área",              icono: "📍" },
   { id: "demoras",    label: "Tiempos y demoras",     icono: "⏱️" },
   { id: "estados",    label: "Por estado actual",     icono: "🔄" },
+  { id: "mapa",       label: "Mapa de reclamos",      icono: "🗺️" },
 ];
 
 const estadoConfig = {
@@ -68,6 +69,128 @@ function KPI({ icono, label, valor, sub, color = "#3dbfbf" }) {
       </div>
       <p className="text-2xl font-black" style={{ color }}>{valor}</p>
       {sub && <p className="text-xs text-gray-400">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Mapa de reclamos ────────────────────────────────────────────────────────
+const COLORES_CATEGORIA = [
+  "#e63946", "#f4a261", "#2a9d8f", "#457b9d", "#8338ec",
+  "#fb5607", "#06d6a0", "#118ab2", "#ef476f", "#ffd166",
+];
+
+function MapaReclamos({ reclamos, categorias }) {
+  const mapaRef = useRef(null);
+  const mapaInstancia = useRef(null);
+
+  const colorPorCategoria = useMemo(() => {
+    const mapa = {};
+    categorias.forEach((cat, i) => {
+      mapa[cat.id] = COLORES_CATEGORIA[i % COLORES_CATEGORIA.length];
+    });
+    return mapa;
+  }, [categorias]);
+
+  const reclamosConUbicacion = useMemo(() =>
+    reclamos.filter(r => r.ubicacion?.lat && r.ubicacion?.lng),
+  [reclamos]);
+
+  useEffect(() => {
+    // Cargar Leaflet CSS si no está
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Cargar Leaflet JS
+    const cargarLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) { resolve(window.L); return; }
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        script.onload = () => resolve(window.L);
+        document.head.appendChild(script);
+      });
+    };
+
+    cargarLeaflet().then((L) => {
+      if (!mapaRef.current) return;
+      if (mapaInstancia.current) {
+        mapaInstancia.current.remove();
+        mapaInstancia.current = null;
+      }
+
+      // Centro por defecto: Soriano, Uruguay
+      const centro = reclamosConUbicacion.length > 0
+        ? [reclamosConUbicacion[0].ubicacion.lat, reclamosConUbicacion[0].ubicacion.lng]
+        : [-33.4, -58.0];
+
+      const map = L.map(mapaRef.current).setView(centro, 13);
+      mapaInstancia.current = map;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+      }).addTo(map);
+
+      reclamosConUbicacion.forEach((r) => {
+        const color = colorPorCategoria[r.categoriaId] || "#3dbfbf";
+        const icono = L.divIcon({
+          className: "",
+          html: `<div style="
+            width:14px;height:14px;border-radius:50%;
+            background:${color};border:2px solid white;
+            box-shadow:0 1px 4px rgba(0,0,0,0.4);
+          "></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        });
+        L.marker([r.ubicacion.lat, r.ubicacion.lng], { icon: icono })
+          .addTo(map)
+          .bindPopup(`
+            <b>${r.categoria || "Sin categoría"}</b><br/>
+            ${r.nombre}<br/>
+            <span style="color:#6b7280;font-size:12px">${r.descripcion?.substring(0, 60)}...</span>
+          `);
+      });
+    });
+
+    return () => {
+      if (mapaInstancia.current) {
+        mapaInstancia.current.remove();
+        mapaInstancia.current = null;
+      }
+    };
+  }, [reclamosConUbicacion, colorPorCategoria]);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="p-4 border-b border-gray-100">
+        <h3 className="font-bold text-gray-700">Mapa de reclamos</h3>
+        <p className="text-xs text-gray-400 mt-1">{reclamosConUbicacion.length} reclamos con ubicación registrada</p>
+      </div>
+
+      {/* Leyenda */}
+      <div className="px-4 pt-3 flex flex-wrap gap-2">
+        {categorias.map((cat, i) => (
+          <div key={cat.id} className="flex items-center gap-1 text-xs text-gray-600">
+            <div className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: COLORES_CATEGORIA[i % COLORES_CATEGORIA.length] }} />
+            {cat.nombre}
+          </div>
+        ))}
+      </div>
+
+      {reclamosConUbicacion.length === 0 ? (
+        <div className="py-16 text-center">
+          <p className="text-3xl mb-2">📍</p>
+          <p className="text-gray-400 text-sm">No hay reclamos con ubicación registrada</p>
+        </div>
+      ) : (
+        <div ref={mapaRef} style={{ height: "420px", width: "100%" }} className="mt-3" />
+      )}
     </div>
   );
 }
@@ -450,6 +573,10 @@ function PanelReportes({ reclamos, categorias, areas }) {
             })}
           </div>
         </div>
+      )}
+      {/* ── MAPA ── */}
+      {reporte === "mapa" && (
+        <MapaReclamos reclamos={reclamos} categorias={categorias} />
       )}
     </div>
   );
